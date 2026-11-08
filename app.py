@@ -131,6 +131,7 @@ class WebHandler(SimpleHTTPRequestHandler):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8000, help="Port dashboard")
+    parser.add_argument("--host", default="127.0.0.1", help="Alamat bind dashboard; Docker: 0.0.0.0")
     parser.add_argument("--clients", nargs="+", help="Client LAN, contoh 192.168.1.11:9101")
     parser.add_argument("--no-browser", action="store_true")
     args = parser.parse_args()
@@ -154,7 +155,7 @@ def main():
                 port = int(line.split()[3].rsplit(":", 1)[1])
                 endpoints.append(("127.0.0.1", port))
         handler = functools.partial(WebHandler, directory=str(ROOT / "static"))
-        with ThreadingHTTPServer(("127.0.0.1", args.port), handler) as server:
+        with ThreadingHTTPServer((args.host, args.port), handler) as server:
             server.coordinator = Coordinator(endpoints)
             url = f"http://127.0.0.1:{server.server_port}"
             print(f"\nBerkeley • Kelompok 8\nBuka {url}\nTekan Ctrl+C untuk berhenti.", flush=True)

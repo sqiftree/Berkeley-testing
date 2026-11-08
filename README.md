@@ -33,6 +33,60 @@ Satu perintah ini otomatis menjalankan 1 koordinator, 3 proses client dengan por
 TCP bebas, dan server dashboard lokal. Browser modern seperti Chrome, Edge, atau
 Firefox diperlukan. Semua aset lokal; demo tidak membutuhkan internet.
 
+## WSL dengan Docker
+
+Untuk pengguna WSL yang biasa memakai Docker, tersedia peluncur terpisah.
+Teman yang memakai Windows langsung tetap cukup menjalankan **`mulai.bat`**
+dengan Python terpasang; tidak perlu Docker.
+
+1. Pastikan `docker info` dan `docker compose version` berhasil di terminal WSL.
+   Jika memakai Docker Desktop, jalankan Docker Desktop dan aktifkan distro WSL
+   di **Settings → Resources → WSL Integration**. Lihat
+   [panduan resmi Docker WSL](https://docs.docker.com/desktop/features/wsl/).
+   Jika sudah memakai Docker Engine langsung di WSL, cukup pastikan daemon berjalan.
+2. Masuk ke folder proyek di terminal WSL, lalu:
+
+   ```bash
+   sh mulai-docker.sh
+   ```
+
+3. Setelah log menampilkan `Buka http://127.0.0.1:8000`, buka
+   **http://localhost:8000** dari browser Windows. Browser tidak dibuka otomatis
+   dari dalam container.
+4. Tekan **Ctrl+C** untuk berhenti. Untuk menghapus container dan jaringan demo:
+
+   ```bash
+   docker compose down
+   ```
+
+Image berisi Python, dashboard, koordinator, dan tiga proses client TCP otomatis
+dalam satu container. Python di Windows/WSL tidak perlu diinstal untuk mode ini.
+Build pertama membutuhkan internet untuk mengambil image Python; setelah image
+tersedia, demo dapat berjalan offline.
+
+Perintah Docker langsung (tanpa peluncur):
+
+```bash
+docker compose up --build
+# Atau jalankan di background:
+docker compose up --build -d
+docker compose logs -f
+# Hentikan mode background:
+docker compose down
+```
+
+Jika port 8000 sudah dipakai, jalankan `BERKELEY_PORT=8080 sh mulai-docker.sh`,
+lalu buka **http://localhost:8080**. Dashboard bind ke `0.0.0.0` di dalam container
+agar port forwarding berfungsi; Docker hanya menerbitkan port pada loopback host.
+Mode standar `mulai.bat` / `mulai.sh` tetap memakai `127.0.0.1`.
+
+Uji dari image Docker:
+
+```bash
+docker compose run --rm --no-deps berkeley python -m unittest discover -s tests -v
+docker compose run --rm --no-deps berkeley python tests/smoke_demo.py
+```
+
 ## Apa yang perlu dilihat?
 
 | Bagian | Makna |
@@ -129,6 +183,9 @@ static/style.css       Tampilan responsif
 static/app.js          Kontrol dashboard dan pembaruan data
 tests/test_berkeley.py Uji hitungan, TCP, outlier, dan client offline
 mulai.bat / mulai.sh   Peluncur untuk pemula
+mulai-docker.sh        Peluncur Docker untuk WSL/Linux
+Dockerfile            Image Python untuk demo
+compose.yaml          Port lokal dan healthcheck Docker
 ```
 
 ## Pengujian

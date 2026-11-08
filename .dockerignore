@@ -1,0 +1,9 @@
+*
+!Dockerfile
+!app.py
+!berkeley.py
+!node.py
+!static/
+!static/**
+!tests/
+!tests/*.py
