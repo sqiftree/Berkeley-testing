@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.venv/
+PRESENTASI.md
+.agents/
+.codex/
+.aws/
