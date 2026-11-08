@@ -138,39 +138,155 @@ dari rata-rata, lalu client itu mendapat koreksi sekitar −296,667 detik.
 Berkeley menghasilkan **sinkronisasi internal**: kesepakatan jam dalam kelompok,
 bukan jaminan jam sesuai UTC. Lihat materi [Rutgers tentang sinkronisasi jam](https://people.cs.rutgers.edu/~pxk/classes/417/notes/clocks.html).
 
-## Praktik bersama di beberapa laptop (opsional)
+## Pengujian terdistribusi pada beberapa laptop
 
-Gunakan jaringan Wi-Fi/LAN yang sama. Salin folder proyek ke setiap laptop.
-Satu anggota menjadi koordinator, tiga anggota lain menjalankan client.
-Tidak perlu menjalankan demo otomatis terlebih dahulu.
+Mode ini menghubungkan koordinator dan client pada perangkat yang berbeda
+melalui jaringan TCP. Peluncur `mulai.bat`, `mulai.sh`, dan `mulai-docker.sh`
+secara default menjalankan tiga client lokal. Untuk pengujian antarlaptop,
+jalankan `node.py` pada perangkat client dan tentukan alamat client melalui
+opsi `--clients` pada koordinator.
 
-Di laptop client 1:
+### 1. Persiapan perangkat dan jaringan
 
-```bash
-python node.py --host 0.0.0.0 --port 9101 --offset 20
+- Hubungkan seluruh perangkat ke jaringan Wi-Fi atau LAN yang sama dan pastikan
+  jaringan mengizinkan komunikasi antarperangkat.
+- Siapkan source code versi terbaru pada setiap perangkat.
+- Tentukan satu perangkat sebagai koordinator. Koordinator dapat berjalan
+  langsung dengan Python atau melalui Docker di WSL.
+- Siapkan Python 3.9 atau lebih baru pada setiap perangkat client Windows.
+  Docker tidak diperlukan pada perangkat client.
+- Izinkan koneksi masuk TCP port `9101` pada firewall perangkat client untuk
+  jaringan privat yang digunakan dalam pengujian.
+
+Pengujian dapat dilakukan dengan satu hingga tiga perangkat client.
+Protokol demonstrasi ini tidak menggunakan autentikasi atau enkripsi;
+gunakan jaringan praktikum tepercaya, bukan internet publik.
+
+### 2. Menjalankan layanan client pada Windows
+
+Buka PowerShell atau Command Prompt pada folder proyek di setiap perangkat
+client. Jalankan perintah sesuai peran perangkat:
+
+| Perangkat | Perintah |
+|---|---|
+| Client 1 | `py -3 node.py --host 0.0.0.0 --port 9101 --offset 20` |
+| Client 2 | `py -3 node.py --host 0.0.0.0 --port 9101 --offset -10` |
+| Client 3 | `py -3 node.py --host 0.0.0.0 --port 9101 --offset 35` |
+
+Jika Python Launcher (`py`) tidak tersedia, gunakan `python` sebagai penggantinya.
+Pada Linux/macOS, gunakan `python3`. Terminal client harus tetap terbuka selama
+pengujian. Port `9101` dapat digunakan pada seluruh client karena masing-masing
+berjalan pada perangkat berbeda. `mulai.bat` tidak diperlukan dalam peran client.
+
+### 3. Mengidentifikasi alamat jaringan client
+
+Jalankan perintah berikut pada setiap perangkat client Windows:
+
+```powershell
+ipconfig
 ```
 
-Di laptop client 2 dan 3 jalankan perintah yang sama, ubah offset menjadi `-10`
-dan `35`. Karena laptopnya berbeda, ketiganya boleh memakai port `9101`.
-Linux/macOS memakai `python3` sebagai pengganti `python`.
+Catat **IPv4 Address** pada adaptor Wi-Fi atau Ethernet yang terhubung ke jaringan
+pengujian. Gunakan alamat adaptor tersebut, bukan alamat loopback `127.0.0.1`
+atau alamat adaptor virtual Docker/WSL. Contoh pemetaan perangkat:
 
-Cari alamat IPv4 setiap client (`ipconfig` di Windows, `hostname -I` di Linux,
-atau pengaturan jaringan macOS). Lalu di laptop koordinator:
+| Perangkat | Alamat IPv4 contoh | Endpoint TCP |
+|---|---|---|
+| Client 1 | `192.168.1.11` | `192.168.1.11:9101` |
+| Client 2 | `192.168.1.12` | `192.168.1.12:9101` |
+| Client 3 | `192.168.1.13` | `192.168.1.13:9101` |
+
+**Seluruh alamat contoh harus diganti dengan alamat IPv4 aktual perangkat client.**
+Koordinator memulai koneksi ke setiap client; alamat koordinator tidak perlu
+dimasukkan pada perintah client.
+
+### 4. Menjalankan koordinator
+
+Pilih salah satu metode berikut sesuai lingkungan koordinator.
+
+#### Docker di WSL
+
+Hentikan demo lokal yang masih berjalan dengan **Ctrl+C**. Dari folder proyek
+di terminal WSL, bersihkan container demo sebelumnya dan siapkan image:
 
 ```bash
-python app.py --clients 192.168.1.11:9101 192.168.1.12:9101 192.168.1.13:9101
+docker compose down
+docker compose build
 ```
 
-**Ganti alamat contoh dengan IP laptop client yang sebenarnya.** Dashboard
-dibuka hanya di laptop koordinator pada http://127.0.0.1:8000.
-Koordinator melakukan koneksi ke client; tidak ada langkah memasukkan IP
-koordinator pada client. Izinkan koneksi masuk TCP 9101 pada laptop client
-untuk jaringan privat. Gunakan jaringan praktikum tepercaya: protokol demo ini
-tidak memakai autentikasi/enkripsi dan tidak ditujukan untuk internet publik.
+Untuk pengujian dengan satu perangkat client:
 
-Jam awal laptop LAN mungkin memang berbeda sehingga offset awal tidak persis
-20/−10/35. Itu wajar: nilai `--offset` ditambahkan ke waktu lokal masing-masing laptop.
-Tombol skenario juga mengatur offset terhadap waktu lokal tiap laptop.
+```bash
+docker compose run --rm --service-ports berkeley \
+  python app.py --host 0.0.0.0 --no-browser \
+  --clients 192.168.1.11:9101
+```
+
+Untuk pengujian dengan tiga perangkat client:
+
+```bash
+docker compose run --rm --service-ports berkeley \
+  python app.py --host 0.0.0.0 --no-browser \
+  --clients 192.168.1.11:9101 192.168.1.12:9101 192.168.1.13:9101
+```
+
+Opsi `--service-ports` menerbitkan port dashboard sesuai `compose.yaml`.
+Opsi `--clients` menggantikan client lokal otomatis dengan endpoint perangkat
+client yang ditentukan. Buka **http://localhost:8000** pada browser Windows
+di perangkat koordinator.
+
+Jika port 8000 digunakan aplikasi lain, tambahkan `BERKELEY_PORT=8080` sebelum
+`docker compose run`, kemudian akses **http://localhost:8080**.
+
+#### Python langsung pada Windows
+
+Dari folder proyek pada perangkat koordinator, jalankan:
+
+```powershell
+py -3 app.py --clients 192.168.1.11:9101 192.168.1.12:9101 192.168.1.13:9101
+```
+
+Untuk satu client, cantumkan satu endpoint setelah `--clients`. Pada Linux/macOS,
+gunakan `python3`. Dashboard tersedia di **http://127.0.0.1:8000**.
+
+Dashboard hanya perlu dibuka pada perangkat koordinator. Perangkat client
+menjalankan layanan TCP dan tidak perlu membuka dashboard.
+
+### 5. Verifikasi dan skenario pengujian
+
+1. Pastikan indikator jaringan menunjukkan **1/1 client online** atau
+   **3/3 client online**, sesuai jumlah endpoint yang dikonfigurasi.
+2. Catat offset awal setiap client, lalu pilih **Sinkronkan sekarang**.
+   Pastikan koreksi diterapkan dan offset terhadap koordinator mendekati nol.
+3. Untuk pengujian tiga client, pilih skenario **Outlier**, kemudian tekan
+   **Terapkan / ulangi** dan **Sinkronkan sekarang**. Client dengan offset
+   di luar ambang dikeluarkan dari perhitungan rata-rata tetapi tetap dikoreksi.
+4. Untuk pengujian kegagalan koneksi, hentikan salah satu layanan client dengan
+   **Ctrl+C**. Pastikan dashboard menandainya offline. Jika masih ada client
+   online, sinkronisasi tetap dapat dilakukan pada client yang tersedia.
+   Jika seluruh client offline, permintaan sinkronisasi akan ditolak.
+5. Jalankan kembali layanan client dengan perintah semula untuk menguji pemulihan
+   koneksi. Tunggu pembaruan status dashboard, lalu ulangi sinkronisasi.
+6. Setelah pengujian selesai, tekan **Ctrl+C** pada terminal koordinator dan
+   seluruh terminal client. Untuk koordinator Docker, jalankan
+   `docker compose down` untuk membersihkan jaringan Compose setelah container
+   pengujian berhenti.
+
+Nilai `--offset` ditambahkan ke waktu lokal masing-masing perangkat. Apabila
+jam sistem antarperangkat sudah berbeda, offset awal yang terukur dapat berbeda
+dari nilai 20/−10/35 detik. Tombol skenario juga mengatur offset terhadap waktu
+lokal perangkat. Seluruh koreksi hanya berlaku pada jam virtual aplikasi dan
+tidak mengubah jam sistem operasi.
+
+### 6. Penanganan kendala koneksi
+
+| Kondisi | Pemeriksaan |
+|---|---|
+| Client berstatus offline sejak awal | Pastikan layanan `node.py` berjalan, alamat IPv4 dan port sesuai, serta firewall mengizinkan TCP `9101` |
+| Seluruh client tidak dapat dijangkau | Periksa konektivitas jaringan, isolasi client pada Wi-Fi, serta rute atau kebijakan VPN yang aktif |
+| Dashboard Docker tidak dapat dibuka | Pastikan perintah menggunakan `--service-ports` dan `--host 0.0.0.0`, serta port host tidak digunakan container atau aplikasi lain |
+| Alamat client berubah setelah koneksi ulang | Periksa kembali IPv4 adaptor aktif dan jalankan ulang koordinator dengan endpoint terbaru |
+| Offset akhir tidak tepat nol | Perbedaan kecil dipengaruhi latensi jaringan dan estimasi RTT; evaluasi selisih setelah sinkronisasi |
 
 ## Struktur source code
 
