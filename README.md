@@ -336,14 +336,3 @@ dapat melampaui toleransi itu. Port client pada pengujian dipilih otomatis.
 | Browser tidak otomatis terbuka | Buka alamat terminal secara manual |
 | Client LAN offline | Periksa IP, terminal client, firewall TCP 9101, dan isolasi Wi-Fi |
 | Jam tidak persis sama | Selisih kecil adalah efek delay/estimasi; lihat nilai detiknya |
-
-## Referensi dan orisinalitas
-
-Terinspirasi pendekatan Python TCP tanpa dependency dari
-[Alkhirza/Sister_Algorithm](https://github.com/Alkhirza/Sister_Algorithm).
-Implementasi ini ditulis baru untuk Kelompok 8, dengan dashboard, peluncur otomatis,
-kompensasi RTT, koreksi jam koordinator, skenario outlier, dan pengujian.
-Tidak menyalin source code repo tersebut.
-
-Referensi konsep: [materi sinkronisasi jam Rutgers](https://people.cs.rutgers.edu/~pxk/classes/417/notes/clocks.html).
-Lengkapi nama/NIM serta dokumentasi praktik nyata kelompok sebelum dikumpulkan.
